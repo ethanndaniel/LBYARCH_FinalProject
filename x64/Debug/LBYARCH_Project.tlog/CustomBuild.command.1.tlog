@@ -1,0 +1,2 @@
+^C:\USERS\ETHAN MAGBATOC\DOCUMENTS\Y2T3\LBYARCH\LBYARCH_PROJECT\LBYARCH_PROJECT\ASMFUNC.ASM
+C:\nasm\nasm.exe -f win64 "C:\Users\Ethan Magbatoc\Documents\Y2T3\LBYARCH\LBYARCH_Project\LBYARCH_Project\asmfunc.asm" -o "asmfunc.obj"
