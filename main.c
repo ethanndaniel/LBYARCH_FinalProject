@@ -8,13 +8,12 @@ extern void asmhello();
 void distance_kernel(const float* X1, const float* X2, const float* Y1, const float* Y2, float* Z, int n);
 void generate_values(float* X1, float* X2, float* Y1, float* Y2, int n);
 void load_sample_values(float* X1, float* X2, float* Y1, float* Y2);
+double benchmark_kernel(const float* X1, const float* X2, const float* Y1, const float* Y2, float* Z, int n);
 
-int main(void)
-{
+int main(void) {
     asmhello();
 
     int n = 4;
-
     //initialize memory allocation
     float* X1 = (float*)malloc(n * sizeof(float));
     float* X2 = (float*)malloc(n * sizeof(float));
@@ -36,15 +35,16 @@ int main(void)
         return 1;
     }
 
+    //compute for execution time using sample values
     load_sample_values(X1, X2, Y1, Y2);
-
-    //call kernel function
-    distance_kernel(X1, X2, Y1, Y2, Z, n);
+    double finalTime = benchmark_kernel(X1, X2, Y1, Y2, Z, n);
 
     //display results
     for (int i = 0; i < n; i++) {
         printf("Z[%d] = %.9f\n", i, Z[i]);
     }
+
+    printf("\nAverage Execution Time (30 runs): %.9f seconds\n", finalTime);
 
     //free the memory
     free(X1);
@@ -57,8 +57,7 @@ int main(void)
 }
 
 //kernel formula
-void distance_kernel(const float* X1, const float* X2, const float* Y1, const float* Y2, float* Z, int n)
-{
+void distance_kernel(const float* X1, const float* X2, const float* Y1, const float* Y2, float* Z, int n) {
     for (int i = 0; i < n; i++) {
         float dx = X2[i] - X1[i];
         float dy = Y2[i] - Y1[i];
@@ -68,8 +67,7 @@ void distance_kernel(const float* X1, const float* X2, const float* Y1, const fl
 }
 
 //sample values for testing
-void load_sample_values(float* X1, float* X2, float* Y1, float* Y2)
-{
+void load_sample_values(float* X1, float* X2, float* Y1, float* Y2) {
     X1[0] = 1.5f;
     X1[1] = 4.0f;
     X1[2] = 3.5f;
@@ -92,12 +90,36 @@ void load_sample_values(float* X1, float* X2, float* Y1, float* Y2)
 }
 
 //generate random values
-void generate_values(float* X1, float* X2, float* Y1, float* Y2, int n)
-{
+void generate_values(float* X1, float* X2, float* Y1, float* Y2, int n) {
     for (int i = 0; i < n; i++) {
         X1[i] = (float)(rand() % 100);
         X2[i] = (float)(rand() % 100);
         Y1[i] = (float)(rand() % 100);
         Y2[i] = (float)(rand() % 100);
     }
+}
+
+//for getting average time with 30 runs
+double benchmark_kernel(const float* X1, const float* X2, const float* Y1, const float* Y2, float* Z, int n) {
+    
+    LARGE_INTEGER frequency;
+    LARGE_INTEGER start;
+    LARGE_INTEGER end;
+
+    QueryPerformanceFrequency(&frequency);
+
+    double finalTime = 0.0;
+
+    for (int i = 0; i < 30; i++)
+    {
+        QueryPerformanceCounter(&start);
+
+        distance_kernel(X1, X2, Y1, Y2, Z, n);
+
+        QueryPerformanceCounter(&end);
+
+        finalTime += (double)(end.QuadPart - start.QuadPart) / frequency.QuadPart;
+    }
+
+    return finalTime / 30.0;
 }
