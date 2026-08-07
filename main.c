@@ -81,12 +81,10 @@ int main(void) {
 
         for (int i = 0; i < n; i++)
         {
-            //absolute value of C kernels minus ASM kernel
-            if (fabsf(Z[i] - Z_asm[i]) > 0.000001)
+            //check if results are equal
+            if (Z[i] != Z_asm[i])
             {
                 correct = 0;
-                printf("Not equal at index %d\n", i);
-                break;
             }
         }
         if (correct)
