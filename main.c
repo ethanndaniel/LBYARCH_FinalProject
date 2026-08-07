@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <windows.h>
 #include <math.h>
+#include <time.h>
 
 extern void asmkernel(const float* X1, const float* X2, const float* Y1, const float* Y2, float* Z, int n);
 
@@ -12,53 +13,95 @@ typedef void (*kernel_func)(const float*, const float*, const float*, const floa
 double benchmark_kernel(kernel_func kernel, const float* X1, const float* X2, const float* Y1, const float* Y2, float* Z, int n);
 
 int main(void) {
+    
+	//for random number generation
+    srand((unsigned)time(NULL));
+
     int n = 4;
-    //initialize memory allocation
-    float* X1 = (float*)malloc(n * sizeof(float));
-    float* X2 = (float*)malloc(n * sizeof(float));
-    float* Y1 = (float*)malloc(n * sizeof(float));
-    float* Y2 = (float*)malloc(n * sizeof(float));
-    float* Z =  (float*)malloc(n * sizeof(float));
-    float* Z_asm = (float*)malloc(n * sizeof(float));
 
-    //verify allocation
-    if (X1 == NULL || X2 == NULL || Y1 == NULL || Y2 == NULL || Z == NULL) {
-        
-        printf("Memory allocation failed.\n");
+	//n = 2^20, 2^24, 2^30 for testing
+    //n = 2^30 laptop couldnt handle it so reduced it to 27 instead
+    int testSizes[] = {1 << 20,1 << 24,1 << 27};
+    int numTests = 3;
 
+    for (int t = 0; t < numTests; t++) {
+        int n = testSizes[t];
+
+
+        //initialize memory allocation
+        float* X1 = (float*)malloc(n * sizeof(float));
+        float* X2 = (float*)malloc(n * sizeof(float));
+        float* Y1 = (float*)malloc(n * sizeof(float));
+        float* Y2 = (float*)malloc(n * sizeof(float));
+        float* Z = (float*)malloc(n * sizeof(float));
+        float* Z_asm = (float*)malloc(n * sizeof(float));
+
+        //verify allocation
+        if (X1 == NULL || X2 == NULL || Y1 == NULL || Y2 == NULL || Z == NULL || Z_asm == NULL) {
+
+            printf("Memory allocation failed.\n");
+
+            free(X1);
+            free(X2);
+            free(Y1);
+            free(Y2);
+            free(Z);
+            free(Z_asm);
+
+            return 1;
+        }
+
+        //compute for execution time using sample values
+
+        printf("\nTesting n = %d\n", n);
+        printf("Generating values:\n");
+
+        generate_values(X1, X2, Y1, Y2, n);
+
+        printf("Benchmarking C:\n");
+        double finalTime_C = benchmark_kernel(distance_kernel, X1, X2, Y1, Y2, Z, n);
+        printf("Benchmarking ASM:\n");
+        double finalTime_asm = benchmark_kernel(asmkernel, X1, X2, Y1, Y2, Z_asm, n);
+        //display first 10 results for C
+        int limit = (n < 10) ? n : 10;
+
+        for (int i = 0; i < limit; i++) {
+            printf("Z[%d] = %.9f\n", i, Z[i]);
+        }
+        printf("\nAverage Execution Time for C (30 runs): %.9f seconds\n", finalTime_C);
+
+        //display first 10 results for ASM
+        for (int i = 0; i < limit; i++) {
+            printf("Z_asm[%d] = %.9f\n", i, Z[i]);
+        }
+        printf("\nAverage Execution Time for ASM (30 runs): %.9f seconds\n", finalTime_asm);
+
+        //verify correctness of asm kernel
+        int correct = 1;
+
+        for (int i = 0; i < n; i++)
+        {
+            //absolute value of C kernels minus ASM kernel
+            if (fabsf(Z[i] - Z_asm[i]) > 0.000001)
+            {
+                correct = 0;
+                printf("Not equal at index %d\n", i);
+                break;
+            }
+        }
+        if (correct)
+            printf("asm kernel is correct.\n");
+        else
+            printf("asm kernel is incorrect.\n");
+
+        //free the memory
         free(X1);
         free(X2);
         free(Y1);
         free(Y2);
         free(Z);
-
-        return 1;
+        free(Z_asm);
     }
-
-    //compute for execution time using sample values
-    load_sample_values(X1, X2, Y1, Y2);
-    double finalTime_C = benchmark_kernel(distance_kernel, X1, X2, Y1, Y2, Z, n);
-    double finalTime_asm = benchmark_kernel(asmkernel, X1, X2, Y1, Y2, Z_asm, n);
-    //display results for C
-    for (int i = 0; i < n; i++) {
-        printf("Z[%d] = %.9f\n", i, Z[i]);
-    }
-
-    printf("\nAverage Execution Time (30 runs): %.9f seconds\n", finalTime_C);
-
-    //display results for ASM
-    for (int i = 0; i < n; i++) {
-        printf("Z_asm[%d] = %.9f\n", i, Z_asm[i]);
-    }
-    printf("\nAverage Execution Time (30 runs): %.9f seconds\n", finalTime_asm);
-
-    //free the memory
-    free(X1);
-    free(X2);
-    free(Y1);
-    free(Y2);
-    free(Z);
-
     return 0;
 }
 
@@ -107,7 +150,7 @@ void generate_values(float* X1, float* X2, float* Y1, float* Y2, int n) {
 
 //for getting average time with 30 runs
 double benchmark_kernel(kernel_func kernel, const float* X1, const float* X2, const float* Y1, const float* Y2, float* Z, int n) {
-    
+
     LARGE_INTEGER frequency;
     LARGE_INTEGER start;
     LARGE_INTEGER end;
