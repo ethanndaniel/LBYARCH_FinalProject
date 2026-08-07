@@ -1,5 +1,3 @@
-%include "io64.inc"
-
 section .text
 bits 64
 default rel
@@ -29,7 +27,7 @@ asmkernel:
     sqrtss xmm0, xmm0
 
     ; store result in Z[i]
-    movss [r10 + rax*4], xmm
+    movss [r10 + rax*4], xmm0
 
     inc rax
     jmp .loop
